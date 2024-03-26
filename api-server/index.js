@@ -41,8 +41,9 @@ const config = {
 app.use(express.json());
 
 app.post('/project', async(req,res)=>{
-    const projectSlug = generateSlug();
-    const {gitUrl} = req.body;
+    
+    const {gitUrl, slug} = req.body;
+    const projectSlug = slug ? slug : generateSlug();
     //run a container docker container
     const command = new RunTaskCommand({
         cluster: config.CLUSTER,
