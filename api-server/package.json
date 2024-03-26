@@ -11,9 +11,16 @@
   "license": "ISC",
   "dependencies": {
     "@aws-sdk/client-ecs": "^3.540.0",
+    "@prisma/client": "^5.11.0",
     "express": "^4.19.1",
     "ioredis": "^5.3.2",
     "random-word-slugs": "^0.1.7",
     "socket.io": "^4.7.5"
+  },
+  "devDependencies": {
+    "@types/node": "^20.11.30",
+    "prisma": "^5.11.0",
+    "ts-node": "^10.9.2",
+    "typescript": "^5.4.3"
   }
 }

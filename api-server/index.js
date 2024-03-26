@@ -40,7 +40,7 @@ const config = {
 
 app.use(express.json());
 
-app.post('/project', async(req,res)=>{
+app.post('/deploy', async(req,res)=>{
     
     const {gitUrl, slug} = req.body;
     const projectSlug = slug ? slug : generateSlug();
