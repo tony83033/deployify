@@ -3,6 +3,8 @@ const {generateSlug} = require('random-word-slugs');
 const Redis = require('ioredis');
 const {Server} = require('socket.io')
 const {ECSClient,RunTaskCommand} = require('@aws-sdk/client-ecs');
+const {z} =  require('zod');
+const {PrismaClient} = require('@prisma/client');
 const app = express();
 const PORT = 9000;
 
@@ -33,6 +35,8 @@ const ecsClient = new ECSClient({
     }
 })
 
+const prisma = new PrismaClient({});
+
 const config = {
     CLUSTER:"arn:aws:ecs:ap-south-1:339712830153:cluster/deployifyCluster",
     TASK_DEFINITION: "arn:aws:ecs:ap-south-1:339712830153:task-definition/deployify-builder-task",
@@ -40,10 +44,55 @@ const config = {
 
 app.use(express.json());
 
+
+app.post('/projects', async(req,res)=>{
+    const schema = z.object({
+        name: z.string(),
+        gitUrl: z.string()
+    });
+
+    // need to validate if valid git url or not 
+    const safeParseResult = schema.safeParse(req.body);
+    if(safeParseResult.error){
+        return res.status(400).json({error:safeParseResult.error});
+    }
+    const {name,gitUrl} = safeParseResult.data;
+
+    const project = await prisma.project.create({
+        data:{
+            name,
+            gitUrl,
+            subdomain:generateSlug()
+        }
+    }) 
+
+    return res.status(200).json({status:'success',data:{project}});
+  
+
+})
+
 app.post('/deploy', async(req,res)=>{
     
-    const {gitUrl, slug} = req.body;
-    const projectSlug = slug ? slug : generateSlug();
+    const {projectId} = req.body;
+    // validate with zod todo
+
+  const project = await prisma.project.findUnique({
+      where:{
+          id:projectId
+      }
+  })
+  if(!project){
+      return res.status(404).json({error:'project not found'});
+  }
+
+  // chek if project is already running or not progress must not be in QUEUED ||IN_PROGRESS || FAIL || READY  || NOT_STARTED =  todo
+  const deployment = await prisma.deployment.findFirst({
+      data :{
+        project :{connect: {id:projectId}},
+        status: 'QUEUED',
+      }
+  })
+
     //run a container docker container
     const command = new RunTaskCommand({
         cluster: config.CLUSTER,
@@ -65,10 +114,12 @@ app.post('/deploy', async(req,res)=>{
                     name: 'builder-image',
                     environment:[
                         {
-                            name:'GIT_REPO_URL',value:gitUrl
+                            name:'GIT_REPO_URL',value:project.gitUrl
                         },
                         {
-                            name:'PROJECT_ID',value:projectSlug
+                            name:'PROJECT_ID',value:projectId
+                        },{
+                            name: 'DEPLOYMENT_ID',value:deployment.id
                         }
                     ]
                 }

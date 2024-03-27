@@ -75,6 +75,7 @@ async function init(){
         }
         console.log('Done uploading to s3');
         publishLogs('Done uploading to s3');
+        process.exit(0)
     })
 }
 
